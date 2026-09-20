@@ -1,0 +1,13 @@
+AQUOS R7 GhostLock temporary root
+Copyright 2026 pirosap
+
+This product includes software developed as part of
+mouseos/aquos-r6-ghostlock (AQUOS R6 GhostLock temporary root),
+Copyright the original authors, licensed under the Apache License 2.0.
+src/ghostlock510.c is a port of its src/ghostlock54.c, with all kernel
+constants re-derived for the AQUOS R7 (see VERIFICATION.md).
+
+This product's exploit design was also informed by R0rt1z2/GhostLock
+(the upstream Linux 5.10 GhostLock PoC for Amazon devices, no license
+stated), which inspired the --stamp3 / --use-setattr approach and the
+built-in su daemon model; no code from that project is redistributed here.
