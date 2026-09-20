@@ -2,8 +2,11 @@
 
 Device-specific Linux 5.10 port of GhostLock (CVE-2026-43499) for the Sharp
 AQUOS R7. The validated target is the AQUOS R7 (`Mineva`, SGA202SH/A202SH)
-running Android 14 build `03.00.06`, kernel
-`5.10.218-android12-9-00041-g124993efd06e-ab12385094` (SM8450).
+running Android 14 build `03.00.11`, kernel
+`5.10.237-android12-9-00013-gd09ef2e980e0-ab13968955` (SM8450).
+The previous validated target, build `03.00.06` / kernel
+`5.10.218-android12-9-00041-g124993efd06e-ab12385094`, is preserved in
+git tag `v1.0-030006`.
 
 This is a port of [aquos-r6-ghostlock](https://github.com/mouseos/aquos-r6-ghostlock)
 (AQUOS R6, kernel 5.4.61-qgki). Every constant — KASLR handling, the
@@ -25,10 +28,13 @@ make build/ghostlock510   # ~3.4 MB static binary
 make strip                # optional; ~0.6 MB, same behaviour
 ```
 
-Reproducibility: this source, built with the toolchain above, is byte-identical
-(MD5 `fa896ebd361519766b46cc2bab70dea2`) to the binary used in all on-device
-tests. The release asset is the `llvm-strip`-ed form of exactly that binary
-(598,672 bytes, SHA-256 `d3056b65380da9fda68bc1891a08c6028ee1cbdb39ff2c3ca136b703f1b0bef7`).
+Reproducibility (03.00.11 calibration): this source, built with the toolchain
+above, is byte-identical (MD5 `25fc1d5d0e92d36c56f00f983a49667d`) to the
+binary used in the on-device 03.00.11 test. The release asset is the
+`llvm-strip`-ed form of exactly that binary (598,672 bytes, SHA-256
+`5c413a80e9fcc41032412f4e0e5183bc723dde9a2e0ace5a6d9c79681b04b9cd`).
+For the 03.00.06 build see tag `v1.0-030006` (unstripped MD5
+`fa896ebd361519766b46cc2bab70dea2`).
 
 ## Run
 
@@ -80,9 +86,15 @@ session lives. Reboot is the cleanup path.
 
 Large external inputs are deliberately not included in this repository:
 
-- Kernel offsets and disassembly were taken from the `vmlinux`/System.map of
-  Android CI kernel build **12385094**; byte-level identity with the kernel
-  actually running on the device was verified via its `boot_a` image.
+- 03.00.11: kernel offsets and disassembly were taken from the
+  `vmlinux`/System.map of Android CI kernel build **13968955**; byte-level
+  identity with the kernel actually running on the device was verified via
+  its `boot_b` image (all 23 PT_LOAD segments, per-segment compare).
+  The CVE fix (5.10.y backport 2026-07-21) post-dates this tree
+  (HEAD 2025-08-20), and `kernel/futex/core.c` is blob-identical to the
+  03.00.06 build — the vulnerability is still present.
+- 03.00.06 (tag `v1.0-030006`): offsets came from Android CI kernel build
+  **12385094**, byte-verified via the device `boot_a` image.
 - SHARP OSS firmware **03.00.01** was used as the device source reference.
 
 ## References
