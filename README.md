@@ -43,10 +43,7 @@ Push the binary (release asset or your own build) and run it **once**:
 ```sh
 adb push ghostlock510 /data/local/tmp/ghostlock510
 adb shell chmod 755 /data/local/tmp/ghostlock510
-adb shell "setsid nohup /data/local/tmp/ghostlock510 \
-  --use-setattr --stamp3 --perm-pc --cred-swap --install-su \
-  --stamp-off 0xf0 --log /data/local/tmp/ghostlock510.log \
-  </dev/null >/dev/null 2>&1 &"
+adb shell "setsid nohup /data/local/tmp/ghostlock510 --use-setattr --stamp3 --perm-pc --cred-swap --install-su --stamp-off 0xf0 --log /data/local/tmp/ghostlock510.log </dev/null >/dev/null 2>&1 &"
 ```
 
 Use the installed `su` client for root commands (full path required):
